@@ -15,4 +15,6 @@ func main() {
 
 	fmt.Println(result1)
 	fmt.Println(result2)
+	//コメント追加
+
 }
