@@ -8,6 +8,8 @@ package main
 - Goのプログラムは何らかのpackageに属している必要あり
 - 1つはmain packageである必要がある
 
+
+
 # 関数の記述の仕方
 /*
 func hogehoge(){
@@ -17,6 +19,8 @@ func hogehoge(){
 }
 */
 
+
+
 # 変数宣言
 /*
 var 変数名 データ型
@@ -25,11 +29,15 @@ var 変数名 = 値 でもOK
 */
 - Goはデータ型省略可能
 
+
+
 ## 変数名のルール
 - 使える文字 : アルファベット, 数字, アンダースコア
 - 小文字と大文字は区別される
 - 1文字目が小文字 = pacakage内のみで使える変数
 - 1文字目が大文字 = 他のpacakageでも使える変数
+
+
 
 # データ型
 - Goは静的型付け言語 <=> 動的型付け言語(Ruby, Python, JavaScript, PHP)
@@ -52,6 +60,8 @@ ex) var 変数名 string = "Hello world"
 - True or False
 ex) var 変数 bool = 5 > 1
 出力) true
+
+
 
 # 配列
 - 0から始まる
@@ -77,6 +87,8 @@ ex) a[1] = "ruby"
      fmt.Println(a[0][1]) = "html"
      fmt.Println(a[1][0]) = "java"
      fmt.Println(a[1][1]) = "c"
+
+
 
 # 演算子
 ## 四則演算
@@ -141,6 +153,30 @@ if 簡易文; 条件A {
     全て満たさない場合
 }
 */
+
+# switch文
+- 値を比較して条件分岐を行う場合、if文より簡単になることがある
+/*
+ switch 式 {
+  case A:
+    処理A1
+    処理A2
+    処理A3
+  case B:
+    処理B1
+    処理B2
+    処理B3
+  case C:
+    処理C1
+    処理C2
+    処理C3
+  default:
+    処理Z1
+    処理Z2
+    処理Z3
+  }
+*/
+
 
 # 繰り返し処理
 /*
@@ -210,6 +246,7 @@ func (x 構造体名) メソッド名(){
 
 }
 */
+
 
 # package
 
