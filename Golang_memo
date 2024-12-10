@@ -1,9 +1,9 @@
 # メモ
 
 # 最初の形
-/*
+```
 package main
-*/
+```
 
 - Goのプログラムは何らかのpackageに属している必要あり
 - 1つはmain packageである必要がある
@@ -11,22 +11,22 @@ package main
 
 
 # 関数の記述の仕方
-/*
-func hogehoge(){
+```
+func 名前(仮引数名 型, ..)返り値の型{
     /*
     やりたい処理
     */
 }
-*/
+```
 
 
 
 # 変数宣言
-/*
+```
 var 変数名 データ型
 var 変数名 = 値 でもOK
 変数名:= 値 暗記必須
-*/
+```
 - Goはデータ型省略可能
 
 
@@ -58,35 +58,235 @@ ex) var 変数名 string = "Hello world"
 
 ## ブール型
 - True or False
+```
 ex) var 変数 bool = 5 > 1
 出力) true
-
+```
 
 
 # 配列
 - 0から始まる
-/*
+```
 変数 := [要素数]データ型{データ１,データ２,...}
 
 - 要素数を省略可能
 要素数 = [...]と記述
-*/
+```
+```
 ex) a := [3]string{"python", "html", "java"}
+```
 
 ## 配列内のデータを変更したい場合
-/*
+```
 変数名[インデックス] = "変更後の値"
-*/
+```
+```
 ex) a[1] = "ruby"
 出力) "html" → "ruby"
+```
 
 ## 多次元配列
-
+```
 変数 := [要素数][要素数]データ型{{"python", "html"}, {"java", "c"}}
 出力) fmt.Println(a[0][0]) = "python"
      fmt.Println(a[0][1]) = "html"
      fmt.Println(a[1][0]) = "java"
      fmt.Println(a[1][1]) = "c"
+```
+
+
+
+# スライス
+- 配列の部分列を取り出すことができるデータ構造
+
+## スライス操作
+- a[start:end]    startからend-1まで
+- a[start:]       startからendまで
+- a[:end]         先頭からend-1まで
+- a[:]            先頭から最後尾まで
+
+```
+ex)
+a := [4]int{1, 2 ,3, 4} 
+b := []int{1, 2, 3, 4, 5, 6, 7, 8}
+c := a[:]
+d := b[2:6]
+fmt.Println(a)
+fmt.Println(b)
+fmt.Println(c)
+fmt.Println(d)
+c[0] = 10
+d[0] = 100
+fmt.Println(a)
+fmt.Println(b)
+fmt.Println(c)
+fmt.Println(d)
+
+出力)
+[1 2 3 4]
+[1 2 3 4 5 6 7 8]
+[1 2 3 4]
+[3 4 5 6]
+[10 2 3 4]
+[1 2 100 4 5 6 7 8]
+[10 2 3 4]
+[100 4 5 6]
+```
+
+## 組み込み関数
+
+### make
+- スライス作成
+```
+slice = make(type,len,[cap])
+```
+    type = スライスの方
+    len = 配列の長さ
+    cap = 容量
+     - capを省略すると容量はlenと同じになる
+
+```
+ex)
+func main(){
+    a := make([]int, 10, 20)
+    fmt.Println(a)
+    fmt.Println(len(a))
+    fmt.Println(cap(a))
+}
+
+出力)
+[0 0 0 0 0 0 0 0 0 0]
+10
+20
+```
+### append
+- スライス操作
+ - 最後尾にデータを追加する
+ - 容量が足りない時は容量を自動で増やす
+
+```
+newSlice = append(slice, x1 ..., xn)
+
+ex)
+func main() {
+    a := []int{1, 2, 3, 4}
+    for i := 5; i <= 10; i++ {
+        a = append(a, i)
+        fmt.Println(a)
+        fmt.Println(len(a))
+        fmt.Println(cap(a))
+    }
+
+出力)
+[1 2 3 4 5]
+5
+8
+[1 2 3 4 5 6]
+6
+8
+[1 2 3 4 5 6 7]
+7
+8
+[1 2 3 4 5 6 7 8]
+8
+8
+[1 2 3 4 5 6 7 8 9]
+9
+16
+[1 2 3 4 5 6 7 8 9 10]
+10
+16
+```
+
+
+
+# 連想配列(map)
+- keyというデータを使って要素を指定するデータ構造
+```
+var 変数名 map[key]value
+var 変数名 map[key]value{key1:value1, key2:value2...}
+```
+- mapの後ろの[]にキーの型を、その後ろに値の方指定
+- 初期値を指定しない場合、変数はnilに初期化される
+
+```
+ex)
+var a map[string]int = map[string]int{"foo": 10, "bar": 20}
+
+func main() {
+    fmt.Println(a)
+    fmt.Println(len(a))
+    fmt.Println(a["foo"])
+    a["foo"] = 100
+    fmt.Println(a["foo"])
+    a["baz"] = 30
+    fmt.Println(a["baz"])
+    fmt.Println(a)
+    fmt.Println(len(a))
+}
+出力)
+map[bar:20 foo:10]
+2
+10
+100
+30
+map[bar:20 baz:30 foo:100]
+3
+```
+## for文のrange節
+- 複数の要素を格納するデータ構造をcollectionやcontainerと呼ぶ
+- for文はrange節でcollection指定するとcollectionから順番に要素を取り出して
+変数に代入し、ブロックに書かれている処理を繰り返し実行する
+
+```
+for k, v:=range collectioin{
+    処理A
+    ~
+    処理Z
+}
+```
+```
+ex)
+func main() {
+    a := []int{1, 2, 3, 4, 5}
+    b := map[string]int{"foo": 10, "bar": 20, "baz": 30}
+    for i, v := range a {
+        fmt.Println(i, v)
+    }
+    for k, v := range b {
+        fmt.Println(k, v)
+    }
+}
+出力)
+0 1
+1 2
+2 3
+3 4
+4 5
+foo 10
+bar 20
+baz 30
+
+ex2)
+func main() {
+    a := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+    sum1 := 0
+    for i := 0; i < len(a); i++ {
+        sum1 += a[i]
+    }
+    fmt.Println(sum1)
+    sum2 := 0
+    for _, v := range a {
+        sum2 += v
+    }
+    fmt.Println(sum2)
+}
+出力)
+55
+55
+```
+
+
 
 
 
@@ -112,28 +312,30 @@ ex) a[1] = "ruby"
 
 # 条件分岐
 ## if文
-/*
+```
 if 条件{
     条件を満たした時の処理
 }
-*/
+```
+```
 ex) age := 22
     if age >= 20{
         fmt.println("adult")
     }
 出力) adult
+```
 
 ## if else文
-/*
+```
 if 条件{
     条件を満たした時の処理
 }else{
     条件を満たさなかった時の処理
 }
-*/
+```
 
 ## さらに条件を増やしたい時
-/*
+```
 if 条件{
     条件を満たした時
 }else if 条件2{
@@ -141,10 +343,10 @@ if 条件{
 }else{
     全て満たさなかった時
 }
-*/
+```
 
 ## 簡易版
-/*
+```
 if 簡易文; 条件A {
     条件Aを満たした時
 }else if 条件B {
@@ -152,11 +354,11 @@ if 簡易文; 条件A {
 }else{
     全て満たさない場合
 }
-*/
+```
 
 # switch文
 - 値を比較して条件分岐を行う場合、if文より簡単になることがある
-/*
+```
  switch 式 {
   case A:
     処理A1
@@ -175,17 +377,18 @@ if 簡易文; 条件A {
     処理Z2
     処理Z3
   }
-*/
+```
 
 
 # 繰り返し処理
-/*
-for i:=0; i<=4; i++{
+```
+for i:=0; i<=4; i++ {
     繰り返し中の処理
 }
-*/
+```
 
 ## break
+```
 ex)
 for i:=0; i<=4; i++{
     if i==3{
@@ -193,9 +396,11 @@ for i:=0; i<=4; i++{
     }
     繰り返し中の処理
 }
+```
 - この場合iが3になった時点で処理が終了する
 
 ## continue
+```
 ex)
 for i:=0; i<=4; i++{
     if i==3{
@@ -203,16 +408,18 @@ for i:=0; i<=4; i++{
     }
     繰り返し中の処理
 }
+```
 - 条件があった時、その処理をスキップする
 
 # 関数
 
 ## 基本の方
-/*
+```
 func 関数名(引数名 データ型){
     実行したい処理
 }
-*/
+```
+```
 ex)
 func sayHallo(greeting string){
     fmt.Println(greeting)
@@ -222,6 +429,7 @@ func main(){
     sayHallo("Good Morning")
 }
 出力) Good Morning
+```
 
 # 構造体
 
@@ -229,23 +437,23 @@ func main(){
 - フィールド = 構造体で宣言した変数
 
 ## 定義の仕方
-/*
+```
 type 構造体 struct {
     field1
     field2
 }
-*/
+```
 
 # メソッド
 - 構造体などの特定の型に関連づけられた関数
  -- test3.goを参照
 
 ## 定義の仕方
-/*
+```
 func (x 構造体名) メソッド名(){
 
 }
-*/
+```
 
 
 # package
