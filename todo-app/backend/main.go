@@ -3,7 +3,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -34,6 +33,17 @@ var todos = []Todo{
 }
 var categories []Category
 
+func enableCORS(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Method", "GET, POST, PUT, DELETE, OPTUINS")
+	w.Header().Set("Acsess-Control-Allow-Headers", "Content-Type, Authorization")
+}
+
+func handlePreflight(w http.ResponseWriter, r *http.Request) {
+	enableCORS(w, r)
+	w.WriteHeader(http.StatusOK)
+}
+
 func main() {
 	// デフォルトカテゴリーの初期化
 	categories = []Category{
@@ -43,6 +53,8 @@ func main() {
 	}
 
 	r := mux.NewRouter()
+
+	r.HandleFunc("/api/todos/{id}", deleteTodo).Methods("DELETE", "OPTIONS")
 
 	// CORSミドルウェア設定
 	r.Use(func(next http.Handler) http.Handler {
@@ -66,7 +78,6 @@ func main() {
 	r.HandleFunc("/api/todos/{id}", updateTodo).Methods("PUT")
 	r.HandleFunc("/api/todos/{id}", deleteTodo).Methods("DELETE")
 
-	fmt.Println("called")
 	// カテゴリー関連のエンドポイント
 	r.HandleFunc("/api/categories", getCategories).Methods("GET")
 	r.HandleFunc("/api/categories", createCategory).Methods("POST")
@@ -121,18 +132,22 @@ func updateTodo(w http.ResponseWriter, r *http.Request) {
 }
 
 func deleteTodo(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("deleteTodo")
+	enableCORS(w, r)
+	if r.Method == "OPTIONS" {
+		handlePreflight(w, r)
+		return
+	}
 	params := mux.Vars(r)
 
 	for i, todo := range todos {
 		if todo.ID == params["id"] {
 			todos = append(todos[:i], todos[i+1:]...)
-			break
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]string{"message": "Todo delete"})
+			return
 		}
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"message": "Todo deleted"})
+	http.Error(w, "Todo not found", http.StatusNotFound)
 }
 
 func getCategories(w http.ResponseWriter, r *http.Request) {

@@ -123,7 +123,7 @@ export default function Home() {
   }
 
   const deleteTodo = async (id: string) => {
-    console.log("deleteTodo1")
+    console.log("deleteTodo1", id);
     await fetch(`http://localhost:8080/api/todos/${id}`, {
       method: 'DELETE',
     })
