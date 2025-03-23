@@ -24,14 +24,14 @@ interface Category {
 export default function Home() {
   const [todos, setTodos] = useState<Todo[]>([])
   const [categories, setCategories] = useState<Category[]>([
-    { id: "1", name: "仕事", color: "#FF4444" },
-    { id: "2", name: "個人", color: "#44FF44" },
-    { id: "3", name: "買い物", color: "#4444FF" }
-  ])
+    { id: "1", name: "個人", color: "#44FF44" },
+    { id: "2", name: "プライベート", color: "#FF88AA" }
+  ])  
   const [newTodo, setNewTodo] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('')
   const [description, setDescription] = useState('')
-  const [dueDate, setDueDate] = useState('')
+  const getInitialDueDate = () => format(new Date(), "yyyy-MM-dd'T'00:00")
+  const [dueDate, setDueDate] = useState(getInitialDueDate())
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
@@ -63,12 +63,14 @@ export default function Home() {
     e.preventDefault()
     if (!newTodo.trim()) return
 
+  
+
     const todoData = {
       title: newTodo,
       category: selectedCategory,
       description: description,
       completed: false,
-      due_date: dueDate ? new Date(dueDate).toISOString() : new Date().toISOString(),
+      due_date: dueDate ? new Date(dueDate).toISOString() : null,
     }
 
     if (editingTodo) {
@@ -101,7 +103,7 @@ export default function Home() {
     setNewTodo('')
     setSelectedCategory('')
     setDescription('')
-    setDueDate('')
+    setDueDate(getInitialDueDate())
     setEditingTodo(null)
     setIsModalOpen(false)
   }
@@ -139,9 +141,7 @@ export default function Home() {
     setSelectedCategory(todo.category)
     setDescription(todo.description)
     const date = new Date(todo.due_date)
-    const localDateTime = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
-    .toISOString()
-    .slice(0, 16)
+    const localDateTime = format(new Date(todo.due_date), "yyyy-MM-dd'T'HH:mm")
     setDueDate(localDateTime)
     setIsModalOpen(true)
   }

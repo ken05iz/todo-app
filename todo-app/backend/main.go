@@ -1,4 +1,3 @@
-// main.go
 package main
 
 import (
@@ -8,10 +7,13 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
+// Todoの属性を定義
 type Todo struct {
-	ID          string    `json:"id"`
+	ID          string    `json:"id" gorm:"primaryKey"`
 	Title       string    `json:"title"`
 	Category    string    `json:"category"`
 	Completed   bool      `json:"completed"`
@@ -20,61 +22,34 @@ type Todo struct {
 	Description string    `json:"description"`
 }
 
+// カテゴリーを定義
 type Category struct {
-	ID    string `json:"id"`
+	ID    string `json:"id" gorm:"primaryKey"`
 	Name  string `json:"name"`
 	Color string `json:"color"`
 }
 
-var todos = []Todo{
-	{ID: "1", Title: "タスク1", Category: "仕事", Completed: false, CreatedAt: time.Now(), DueDate: time.Now(), Description: "タスク1の説明"},
-	{ID: "2", Title: "タスク2", Category: "個人", Completed: false, CreatedAt: time.Now(), DueDate: time.Now(), Description: "タスク2の説明"},
-	{ID: "3", Title: "タスク3", Category: "買い物", Completed: false, CreatedAt: time.Now(), DueDate: time.Now(), Description: "タスク3の説明"},
-}
-var categories []Category
-
-func enableCORS(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Method", "GET, POST, PUT, DELETE, OPTUINS")
-	w.Header().Set("Acsess-Control-Allow-Headers", "Content-Type, Authorization")
-}
-
-func handlePreflight(w http.ResponseWriter, r *http.Request) {
-	enableCORS(w, r)
-	w.WriteHeader(http.StatusOK)
-}
+var db *gorm.DB
 
 func main() {
-	// デフォルトカテゴリーの初期化
-	categories = []Category{
-		{ID: "1", Name: "仕事", Color: "#FF4444"},
-		{ID: "2", Name: "個人", Color: "#44FF44"},
-		{ID: "3", Name: "買い物", Color: "#4444FF"},
+	var err error
+	// SQLite の todos.db というファイルを使ってデータベースに接続
+	db, err = gorm.Open(sqlite.Open("todos.db"), &gorm.Config{})
+	if err != nil {
+		log.Fatal("データベース接続エラー: ", err)
 	}
+
+	// モデルに基づいてテーブルを自動マイグレーション
+	db.AutoMigrate(&Todo{}, &Category{})
+
+	// 初期カテゴリーを登録（既に存在する場合はスキップ）
+	initCategories()
 
 	r := mux.NewRouter()
 
-	r.HandleFunc("/api/todos/{id}", deleteTodo).Methods("DELETE", "OPTIONS")
-
-	// CORSミドルウェア設定
-	r.Use(func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Access-Control-Allow-Origin", "*") // より緩和的な設定
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-			if r.Method == "OPTIONS" {
-				w.WriteHeader(http.StatusOK)
-				return
-			}
-
-			next.ServeHTTP(w, r)
-		})
-	})
-
-	// Todo関連のエンドポイント
+	// Todo 関連のエンドポイント
 	r.HandleFunc("/api/todos", getTodos).Methods("GET")
-	r.HandleFunc("/api/todos", createTodo).Methods("POST")
+	r.HandleFunc("/api/todos", createTodo).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/todos/{id}", updateTodo).Methods("PUT")
 	r.HandleFunc("/api/todos/{id}", deleteTodo).Methods("DELETE")
 
@@ -86,29 +61,44 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8080", r))
 }
 
+// initCategories は、初期カテゴリー（ここでは「個人」と「プライベート」）を追加します。
+func initCategories() {
+	categories := []Category{
+		{ID: "1", Name: "個人", Color: "#44FF44"},
+		{ID: "2", Name: "プライベート", Color: "#FF88AA"},
+	}
+	for _, cat := range categories {
+		var existing Category
+		// ID で検索し、存在しなければ作成
+		if err := db.First(&existing, "id = ?", cat.ID).Error; err != nil {
+			db.Create(&cat)
+		}
+	}
+}
+
 func getTodos(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	var todos []Todo
+	db.Find(&todos)
 	json.NewEncoder(w).Encode(todos)
 }
 
 func createTodo(w http.ResponseWriter, r *http.Request) {
 	var todo Todo
-	// リクエストボディをデコード
+	// リクエストボディをパース
 	if err := json.NewDecoder(r.Body).Decode(&todo); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
+	// 一意の ID と作成日時を設定
 	todo.ID = time.Now().Format("20060102150405")
 	todo.CreatedAt = time.Now()
-
-	// DueDateの変換
 	if todo.DueDate.IsZero() {
-		todo.DueDate = time.Now() // デフォルト値を設定
+		todo.DueDate = time.Now()
 	}
 
-	todos = append(todos, todo)
-
+	db.Create(&todo)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(todo)
 }
@@ -116,52 +106,47 @@ func createTodo(w http.ResponseWriter, r *http.Request) {
 func updateTodo(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	var updatedTodo Todo
-	json.NewDecoder(r.Body).Decode(&updatedTodo)
-
-	for i, todo := range todos {
-		if todo.ID == params["id"] {
-			updatedTodo.ID = todo.ID
-			updatedTodo.CreatedAt = todo.CreatedAt
-			todos[i] = updatedTodo
-			break
-		}
+	if err := json.NewDecoder(r.Body).Decode(&updatedTodo); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
+	var todo Todo
+	if err := db.First(&todo, "id = ?", params["id"]).Error; err != nil {
+		http.Error(w, "Todo not found", http.StatusNotFound)
+		return
+	}
+
+	// ID と作成日時は元のものを維持
+	updatedTodo.ID = todo.ID
+	updatedTodo.CreatedAt = todo.CreatedAt
+	db.Model(&todo).Updates(updatedTodo)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(updatedTodo)
 }
 
 func deleteTodo(w http.ResponseWriter, r *http.Request) {
-	enableCORS(w, r)
-	if r.Method == "OPTIONS" {
-		handlePreflight(w, r)
-		return
-	}
 	params := mux.Vars(r)
-
-	for i, todo := range todos {
-		if todo.ID == params["id"] {
-			todos = append(todos[:i], todos[i+1:]...)
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]string{"message": "Todo delete"})
-			return
-		}
-	}
-	http.Error(w, "Todo not found", http.StatusNotFound)
+	db.Delete(&Todo{}, "id = ?", params["id"])
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Todo deleted"})
 }
 
 func getCategories(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	var categories []Category
+	db.Find(&categories)
 	json.NewEncoder(w).Encode(categories)
 }
 
 func createCategory(w http.ResponseWriter, r *http.Request) {
 	var category Category
-	json.NewDecoder(r.Body).Decode(&category)
-
+	if err := json.NewDecoder(r.Body).Decode(&category); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 	category.ID = time.Now().Format("20060102150405")
-	categories = append(categories, category)
-
+	db.Create(&category)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(category)
 }
