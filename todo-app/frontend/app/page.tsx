@@ -13,6 +13,7 @@ interface Todo {
   completed: boolean
   created_at: string
   due_date: string
+  status: "進行中" | "待ち" | "対応完了"
 }
 
 interface Category {
@@ -249,57 +250,168 @@ export default function Home() {
 
         )}
 
-        {/* ToDo一覧 */}
-        <div className="space-y-4">
-          {todos.map((todo) => (
-            <div
-              key={todo.id}
-              className="flex items-center justify-between p-4 border rounded-lg hover:shadow-md transition-shadow"
-            >
-              <div className="flex-1">
-                <div className="flex items-center gap-4">
-                  <input
-                    type="checkbox"
-                    checked={todo.completed}
-                    onChange={() => toggleTodo(todo)}
-                    className="w-5 h-5"
-                  />
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: getCategoryColor(todo.category) }}
-                      />
-                      <span className={todo.completed ? 'line-through text-gray-500' : 'font-medium'}>
-                        {todo.title}
-                      </span>
+        {/* Kanban ボード形式の ToDo一覧 */}
+        <div className="flex space-x-4">
+          {/* 「進行中」列 */}
+          <div className="flex-1">
+            <h2 className="text-xl font-bold mb-4">進行中</h2>
+            {todos
+              .filter(todo => todo.status === "進行中")
+              .map((todo) => (
+                <div
+                  key={todo.id}
+                  className="mb-4 p-4 bg-white border rounded-lg hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="checkbox"
+                      checked={todo.completed}
+                      onChange={() => toggleTodo(todo)}
+                      className="w-5 h-5"
+                    />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: getCategoryColor(todo.category) }}
+                        />
+                        <span className={todo.completed ? 'line-through text-gray-500' : 'font-medium'}>
+                          {todo.title}
+                        </span>
+                      </div>
+                      {todo.description && (
+                        <p className="text-sm text-gray-600 mt-1">{todo.description}</p>
+                      )}
+                      <p className="text-sm text-gray-500 mt-1">
+                        期限: {format(new Date(todo.due_date), 'yyyy/MM/dd HH:mm', { locale: ja })}
+                      </p>
                     </div>
-                    {todo.description && (
-                      <p className="text-sm text-gray-600 mt-1">{todo.description}</p>
-                    )}
-                    <p className="text-sm text-gray-500 mt-1">
-                      期限: {format(new Date(todo.due_date), 'yyyy/MM/dd HH:mm', { locale: ja })}
-                    </p>
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={() => startEditing(todo)}
+                      className="text-blue-500 hover:text-blue-600"
+                    >
+                      編集
+                    </button>
+                    <button
+                      onClick={() => deleteTodo(todo.id)}
+                      className="text-red-500 hover:text-red-600"
+                    >
+                      削除
+                    </button>
                   </div>
                 </div>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => startEditing(todo)}
-                  className="text-blue-500 hover:text-blue-600"
+              ))}
+          </div>
+
+          {/* 「待ち」列 */}
+          <div className="flex-1">
+            <h2 className="text-xl font-bold mb-4">待ち</h2>
+            {todos
+              .filter(todo => todo.status === "待ち")
+              .map((todo) => (
+                <div
+                  key={todo.id}
+                  className="mb-4 p-4 bg-white border rounded-lg hover:shadow-md transition-shadow"
                 >
-                  編集
-                </button>
-                <button
-                  onClick={() => deleteTodo(todo.id)}
-                  className="text-red-500 hover:text-red-600"
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="checkbox"
+                      checked={todo.completed}
+                      onChange={() => toggleTodo(todo)}
+                      className="w-5 h-5"
+                    />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: getCategoryColor(todo.category) }}
+                        />
+                        <span className={todo.completed ? 'line-through text-gray-500' : 'font-medium'}>
+                          {todo.title}
+                        </span>
+                      </div>
+                      {todo.description && (
+                        <p className="text-sm text-gray-600 mt-1">{todo.description}</p>
+                      )}
+                      <p className="text-sm text-gray-500 mt-1">
+                        期限: {format(new Date(todo.due_date), 'yyyy/MM/dd HH:mm', { locale: ja })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={() => startEditing(todo)}
+                      className="text-blue-500 hover:text-blue-600"
+                    >
+                      編集
+                    </button>
+                    <button
+                      onClick={() => deleteTodo(todo.id)}
+                      className="text-red-500 hover:text-red-600"
+                    >
+                      削除
+                    </button>
+                  </div>
+                </div>
+              ))}
+          </div>
+
+          {/* 「対応完了」列 */}
+          <div className="flex-1">
+            <h2 className="text-xl font-bold mb-4">対応完了</h2>
+            {todos
+              .filter(todo => todo.status === "対応完了")
+              .map((todo) => (
+                <div
+                  key={todo.id}
+                  className="mb-4 p-4 bg-white border rounded-lg hover:shadow-md transition-shadow"
                 >
-                  削除
-                </button>
-              </div>
-            </div>
-          ))}
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="checkbox"
+                      checked={todo.completed}
+                      onChange={() => toggleTodo(todo)}
+                      className="w-5 h-5"
+                    />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: getCategoryColor(todo.category) }}
+                        />
+                        <span className={todo.completed ? 'line-through text-gray-500' : 'font-medium'}>
+                          {todo.title}
+                        </span>
+                      </div>
+                      {todo.description && (
+                        <p className="text-sm text-gray-600 mt-1">{todo.description}</p>
+                      )}
+                      <p className="text-sm text-gray-500 mt-1">
+                        期限: {format(new Date(todo.due_date), 'yyyy/MM/dd HH:mm', { locale: ja })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={() => startEditing(todo)}
+                      className="text-blue-500 hover:text-blue-600"
+                    >
+                      編集
+                    </button>
+                    <button
+                      onClick={() => deleteTodo(todo.id)}
+                      className="text-red-500 hover:text-red-600"
+                    >
+                      削除
+                    </button>
+                  </div>
+                </div>
+              ))}
+          </div>
         </div>
+
       </div>
     </main>
   )

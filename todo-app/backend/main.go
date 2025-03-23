@@ -20,6 +20,7 @@ type Todo struct {
 	CreatedAt   time.Time `json:"created_at"`
 	DueDate     time.Time `json:"due_date"`
 	Description string    `json:"description"`
+	Status      string    `json:"status"`
 }
 
 // カテゴリーを定義
@@ -45,7 +46,22 @@ func main() {
 	// 初期カテゴリーを登録（既に存在する場合はスキップ）
 	initCategories()
 
+	//ルーターの作成
 	r := mux.NewRouter()
+
+	// CORS ミドルウェアの追加
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+			if r.Method == "OPTIONS" {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	})
 
 	// Todo 関連のエンドポイント
 	r.HandleFunc("/api/todos", getTodos).Methods("GET")
@@ -96,6 +112,10 @@ func createTodo(w http.ResponseWriter, r *http.Request) {
 	todo.CreatedAt = time.Now()
 	if todo.DueDate.IsZero() {
 		todo.DueDate = time.Now()
+	}
+
+	if todo.Status == "" {
+		todo.Status = "進行中"
 	}
 
 	db.Create(&todo)
