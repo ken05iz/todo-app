@@ -30,6 +30,13 @@ type Category struct {
 	Color string `json:"color"`
 }
 
+type TodoInput struct {
+	Title       string `json:"title"`
+	Category    string `json:"category"`
+	Description string `json:"description"`
+	DueDateStr  string `json:"due_date"`
+}
+
 var db *gorm.DB
 
 func main() {
@@ -66,7 +73,7 @@ func main() {
 	// Todo 関連のエンドポイント
 	r.HandleFunc("/api/todos", getTodos).Methods("GET")
 	r.HandleFunc("/api/todos", createTodo).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/todos/{id}", updateTodo).Methods("PUT")
+	r.HandleFunc("/api/todos/{id}", updateTodo).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/todos/{id}", deleteTodo).Methods("DELETE")
 
 	// カテゴリー関連のエンドポイント
@@ -100,26 +107,30 @@ func getTodos(w http.ResponseWriter, r *http.Request) {
 }
 
 func createTodo(w http.ResponseWriter, r *http.Request) {
-	var todo Todo
-	// リクエストボディをパース
-	if err := json.NewDecoder(r.Body).Decode(&todo); err != nil {
+	var input TodoInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// 一意の ID と作成日時を設定
-	todo.ID = time.Now().Format("20060102150405")
-	todo.CreatedAt = time.Now()
-	if todo.DueDate.IsZero() {
-		todo.DueDate = time.Now()
+	// カスタムフォーマット（例: 2006-01-02T15:04）でパース
+	due, err := time.Parse("2006-01-02T15:04", input.DueDateStr)
+	if err != nil {
+		http.Error(w, "Invalid date format", http.StatusBadRequest)
+		return
 	}
 
-	if todo.Status == "" {
-		todo.Status = "進行中"
+	todo := Todo{
+		ID:          time.Now().Format("20060102150405"),
+		Title:       input.Title,
+		Category:    input.Category,
+		Description: input.Description,
+		CreatedAt:   time.Now(),
+		DueDate:     due,
+		Status:      "進行中",
 	}
 
 	db.Create(&todo)
-	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(todo)
 }
 
