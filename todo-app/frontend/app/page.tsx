@@ -1,10 +1,11 @@
-// app/page.tsx
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 
+// Todo の型定義
 interface Todo {
   id: string
   title: string
@@ -16,6 +17,7 @@ interface Todo {
   status: "進行中" | "待ち" | "対応完了"
 }
 
+// Category の型定義
 interface Category {
   id: string
   name: string
@@ -24,231 +26,99 @@ interface Category {
 
 export default function Home() {
   const [todos, setTodos] = useState<Todo[]>([])
-  const [categories, setCategories] = useState<Category[]>([
-    { id: "1", name: "個人", color: "#44FF44" },
-    { id: "2", name: "プライベート", color: "#FF88AA" }
-  ])  
-  const [newTodo, setNewTodo] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState('')
-  const [description, setDescription] = useState('')
-  const getInitialDueDate = () => format(new Date(), "yyyy-MM-dd'T'00:00")
-  const [dueDate, setDueDate] = useState(getInitialDueDate())
-  const [editingTodo, setEditingTodo] = useState<Todo | null>(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [categories, setCategories] = useState<Category[]>([])
 
   useEffect(() => {
     fetchTodos()
     fetchCategories()
   }, [])
 
+  // タスク一覧を取得
   const fetchTodos = async () => {
-    const response = await fetch('http://localhost:8080/api/todos')
-    const data = await response.json()
-    console.log(data)
-    setTodos(data)
+    try {
+      const response = await fetch('http://localhost:8080/api/todos')
+      if (!response.ok) {
+        throw new Error(`Error fetching todos: ${response.statusText}`)
+      }
+      const data = await response.json()
+      setTodos(data)
+    } catch (error) {
+      console.error(error)
+    }
   }
 
+  // カテゴリー一覧を取得
   const fetchCategories = async () => {
     try {
       const response = await fetch('http://localhost:8080/api/categories')
-      const data = await response.json()
-      if (data && data.length > 0) {
-        setCategories(data)
+      if (!response.ok) {
+        throw new Error(`Error fetching categories: ${response.statusText}`)
       }
+      const data = await response.json()
+      setCategories(data)
     } catch (error) {
-      console.error("カテゴリーの取得に失敗:", error)
+      console.error(error)
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newTodo.trim()) return
-
-  
-
-    const todoData = {
-      title: newTodo,
-      category: selectedCategory,
-      description: description,
-      completed: false,
-      due_date: dueDate ? new Date(dueDate).toISOString() : null,
-    }
-
-    if (editingTodo) {
-      // 更新処理
-      const response = await fetch(`http://localhost:8080/api/todos/${editingTodo.id}`, {
+  // タスクの完了/未完了を切り替える
+  const toggleTodo = async (todo: Todo) => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/todos/${todo.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(todoData),
+        body: JSON.stringify({
+          ...todo,
+          completed: !todo.completed,
+        }),
       })
-
+      if (!response.ok) {
+        throw new Error(`Error updating todo: ${response.statusText}`)
+      }
       const updatedTodo = await response.json()
-      setTodos(todos.map(t => t.id === editingTodo.id ? updatedTodo : t))
-    } else {
-      // 新規作成処理
-      const response = await fetch('http://localhost:8080/api/todos', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(todoData),
-      })
-
-      const data = await response.json()
-      setTodos([...todos, data])
+      setTodos(todos.map(t => t.id === todo.id ? updatedTodo : t))
+    } catch (error) {
+      console.error(error)
     }
-
-    // フォームをリセット
-    setNewTodo('')
-    setSelectedCategory('')
-    setDescription('')
-    setDueDate(getInitialDueDate())
-    setEditingTodo(null)
-    setIsModalOpen(false)
   }
 
-  const toggleTodo = async (todo: Todo) => {
-    const response = await fetch(`http://localhost:8080/api/todos/${todo.id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        ...todo,
-        completed: !todo.completed,
-      }),
-    })
-
-    const updatedTodo = await response.json()
-    setTodos(todos.map(t => t.id === todo.id ? updatedTodo : t))
-  }
-
+  // タスクを削除
   const deleteTodo = async (id: string) => {
-    console.log("deleteTodo1", id);
-    await fetch(`http://localhost:8080/api/todos/${id}`, {
-      method: 'DELETE',
-    })
-
-    console.log("deleteTodo")
-
-    setTodos(todos.filter(todo => todo.id !== id))
+    try {
+      const response = await fetch(`http://localhost:8080/api/todos/${id}`, {
+        method: 'DELETE',
+      })
+      if (!response.ok) {
+        throw new Error(`Error deleting todo: ${response.statusText}`)
+      }
+      setTodos(todos.filter(todo => todo.id !== id))
+    } catch (error) {
+      console.error(error)
+    }
   }
 
-  const startEditing = (todo: Todo) => {
-    setEditingTodo(todo)
-    setNewTodo(todo.title)
-    setSelectedCategory(todo.category)
-    setDescription(todo.description)
-    const date = new Date(todo.due_date)
-    const localDateTime = format(new Date(todo.due_date), "yyyy-MM-dd'T'HH:mm")
-    setDueDate(localDateTime)
-    setIsModalOpen(true)
-  }
-
+  // カテゴリーIDから色を取得
   const getCategoryColor = (categoryId: string) => {
     const category = categories.find(c => c.id === categoryId)
     return category?.color || '#CCCCCC'
   }
 
   return (
-    <main className="min-h-screen p-8">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8">Todo App</h1>
-        
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="mb-8 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-        >
-          新しいタスクを追加
-        </button>
-
-        {/* モーダル */}
-        {isModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-            <div className="bg-white p-8 rounded-lg w-full max-w-md">
-              <h2 className="text-2xl font-bold mb-4">
-                {editingTodo ? 'タスクを編集' : '新しいタスク'}
-              </h2>
-              
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">タイトル</label>
-                  <input
-                    type="text"
-                    value={newTodo}
-                    onChange={(e) => setNewTodo(e.target.value)}
-                    className="w-full px-4 py-2 border rounded"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">カテゴリー</label>
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="w-full px-4 py-2 border rounded"
-                    required
-                  >
-                    <option value="">カテゴリーを選択...</option>
-                    {categories.map(category => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">説明</label>
-                  <textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="w-full px-4 py-2 border rounded"
-                    rows={3}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">締切日時</label>
-                  <input
-                    type="datetime-local"
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    className="w-full px-4 py-2 border rounded"
-                    required
-                  />
-                </div>
-
-                <div className="flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsModalOpen(false)
-                      setEditingTodo(null)
-                      setNewTodo('')
-                      setSelectedCategory('')
-                      setDescription('')
-                      setDueDate('')
-                    }}
-                    className="px-4 py-2 text-gray-600 hover:text-gray-800"
-                  >
-                    キャンセル
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                  >
-                    {editingTodo ? '更新' : '追加'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-
-        )}
+    <main className="min-h-screen bg-gray-50 p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* ヘッダー部分 */}
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold">タスク管理</h1>
+          {/* ここで <Link> の中に <a> を入れない書き方に変更 */}
+          <Link
+            href="/create-task"
+            className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+          >
+            タスクを作成
+          </Link>
+        </div>
 
         {/* Kanban ボード形式の ToDo一覧 */}
         <div className="flex space-x-4">
@@ -258,45 +128,27 @@ export default function Home() {
             {todos
               .filter(todo => todo.status === "進行中")
               .map((todo) => (
-                <div
-                  key={todo.id}
-                  className="mb-4 p-4 bg-white border rounded-lg hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-center gap-4">
-                    <input
-                      type="checkbox"
-                      checked={todo.completed}
-                      onChange={() => toggleTodo(todo)}
-                      className="w-5 h-5"
+                <div key={todo.id} className="mb-4 p-4 bg-white border rounded-lg shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: getCategoryColor(todo.category) }}
                     />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: getCategoryColor(todo.category) }}
-                        />
-                        <span className={todo.completed ? 'line-through text-gray-500' : 'font-medium'}>
-                          {todo.title}
-                        </span>
-                      </div>
-                      {todo.description && (
-                        <p className="text-sm text-gray-600 mt-1">{todo.description}</p>
-                      )}
-                      <p className="text-sm text-gray-500 mt-1">
-                        期限: {format(new Date(todo.due_date), 'yyyy/MM/dd HH:mm', { locale: ja })}
-                      </p>
-                    </div>
+                    <p className="font-medium">{todo.title}</p>
                   </div>
+                  <p className="text-sm text-gray-500 mt-1">
+                    期限: {format(new Date(todo.due_date), 'yyyy/MM/dd HH:mm', { locale: ja })}
+                  </p>
                   <div className="flex gap-2 mt-2">
                     <button
-                      onClick={() => startEditing(todo)}
-                      className="text-blue-500 hover:text-blue-600"
+                      className="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded"
+                      onClick={() => toggleTodo(todo)}
                     >
-                      編集
+                      {todo.completed ? '進行中に戻す' : '完了'}
                     </button>
                     <button
+                      className="px-2 py-1 bg-red-200 hover:bg-red-300 rounded"
                       onClick={() => deleteTodo(todo.id)}
-                      className="text-red-500 hover:text-red-600"
                     >
                       削除
                     </button>
@@ -311,45 +163,27 @@ export default function Home() {
             {todos
               .filter(todo => todo.status === "待ち")
               .map((todo) => (
-                <div
-                  key={todo.id}
-                  className="mb-4 p-4 bg-white border rounded-lg hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-center gap-4">
-                    <input
-                      type="checkbox"
-                      checked={todo.completed}
-                      onChange={() => toggleTodo(todo)}
-                      className="w-5 h-5"
+                <div key={todo.id} className="mb-4 p-4 bg-white border rounded-lg shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: getCategoryColor(todo.category) }}
                     />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: getCategoryColor(todo.category) }}
-                        />
-                        <span className={todo.completed ? 'line-through text-gray-500' : 'font-medium'}>
-                          {todo.title}
-                        </span>
-                      </div>
-                      {todo.description && (
-                        <p className="text-sm text-gray-600 mt-1">{todo.description}</p>
-                      )}
-                      <p className="text-sm text-gray-500 mt-1">
-                        期限: {format(new Date(todo.due_date), 'yyyy/MM/dd HH:mm', { locale: ja })}
-                      </p>
-                    </div>
+                    <p className="font-medium">{todo.title}</p>
                   </div>
+                  <p className="text-sm text-gray-500 mt-1">
+                    期限: {format(new Date(todo.due_date), 'yyyy/MM/dd HH:mm', { locale: ja })}
+                  </p>
                   <div className="flex gap-2 mt-2">
                     <button
-                      onClick={() => startEditing(todo)}
-                      className="text-blue-500 hover:text-blue-600"
+                      className="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded"
+                      onClick={() => toggleTodo(todo)}
                     >
-                      編集
+                      {todo.completed ? '進行中に戻す' : '完了'}
                     </button>
                     <button
+                      className="px-2 py-1 bg-red-200 hover:bg-red-300 rounded"
                       onClick={() => deleteTodo(todo.id)}
-                      className="text-red-500 hover:text-red-600"
                     >
                       削除
                     </button>
@@ -364,45 +198,27 @@ export default function Home() {
             {todos
               .filter(todo => todo.status === "対応完了")
               .map((todo) => (
-                <div
-                  key={todo.id}
-                  className="mb-4 p-4 bg-white border rounded-lg hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-center gap-4">
-                    <input
-                      type="checkbox"
-                      checked={todo.completed}
-                      onChange={() => toggleTodo(todo)}
-                      className="w-5 h-5"
+                <div key={todo.id} className="mb-4 p-4 bg-white border rounded-lg shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: getCategoryColor(todo.category) }}
                     />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: getCategoryColor(todo.category) }}
-                        />
-                        <span className={todo.completed ? 'line-through text-gray-500' : 'font-medium'}>
-                          {todo.title}
-                        </span>
-                      </div>
-                      {todo.description && (
-                        <p className="text-sm text-gray-600 mt-1">{todo.description}</p>
-                      )}
-                      <p className="text-sm text-gray-500 mt-1">
-                        期限: {format(new Date(todo.due_date), 'yyyy/MM/dd HH:mm', { locale: ja })}
-                      </p>
-                    </div>
+                    <p className="font-medium">{todo.title}</p>
                   </div>
+                  <p className="text-sm text-gray-500 mt-1">
+                    期限: {format(new Date(todo.due_date), 'yyyy/MM/dd HH:mm', { locale: ja })}
+                  </p>
                   <div className="flex gap-2 mt-2">
                     <button
-                      onClick={() => startEditing(todo)}
-                      className="text-blue-500 hover:text-blue-600"
+                      className="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded"
+                      onClick={() => toggleTodo(todo)}
                     >
-                      編集
+                      {todo.completed ? '進行中に戻す' : '完了'}
                     </button>
                     <button
+                      className="px-2 py-1 bg-red-200 hover:bg-red-300 rounded"
                       onClick={() => deleteTodo(todo.id)}
-                      className="text-red-500 hover:text-red-600"
                     >
                       削除
                     </button>
@@ -411,7 +227,6 @@ export default function Home() {
               ))}
           </div>
         </div>
-
       </div>
     </main>
   )
